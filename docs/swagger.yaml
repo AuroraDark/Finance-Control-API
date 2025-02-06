@@ -1,0 +1,16 @@
+basePath: /api
+host: localhost:8080
+info:
+  contact:
+    email: suporte@seusite.com
+    name: Suporte da API
+    url: http://www.seusite.com/support
+  description: API REST para controle financeiro.
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Finance Control Backend API
+  version: "1.0"
+paths: {}
+swagger: "2.0"

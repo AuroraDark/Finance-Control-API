@@ -1,0 +1,10 @@
+{
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "user": "postgres",
+    "password": "your_password",
+    "dbname": "finance_db",
+    "sslmode": "disable"
+  }
+}
