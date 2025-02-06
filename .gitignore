@@ -1,0 +1,31 @@
+# Project
+/config/config.json
+
+# Binaries para programas e plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Arquivos de teste compilados com 'go test -c'
+*.test
+
+# Saída de cobertura dos testes
+*.out
+
+# Diretórios de build
+/bin/
+/build/
+/dist/
+
+# Diretório de dependências (caso utilize o vendor)
+vendor/
+
+# Arquivos gerados pelo Go modules
+go.sum
+
+# Configurações de IDEs e editores comuns
+.vscode/
+.idea/
+*.swp
