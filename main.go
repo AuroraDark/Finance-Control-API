@@ -10,6 +10,7 @@ import (
 
 	"finance-control/config"
 	"finance-control/handlers"
+	"finance-control/middleware"
 	"finance-control/models"
 	"finance-control/repository"
 
@@ -25,22 +26,18 @@ func main() {
 	config.LoadConfig("config/config.json")
 	dbConfig := config.AppConfig.Database
 
-	// Monta a string de conexão com PostgreSQL
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%d sslmode=%s",
 		dbConfig.Host, dbConfig.User, dbConfig.Password, dbConfig.DBName, dbConfig.Port, dbConfig.SSLMode)
 
-	// Conecta ao banco de dados utilizando GORM
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Error connecting to database: %v", err)
 	}
 
-	// Migra os modelos: Category, Transaction, User, Investment e InvestmentMovement
 	if err := db.AutoMigrate(&models.Category{}, &models.Transaction{}, &models.User{}, &models.Investment{}, &models.InvestmentMovement{}); err != nil {
 		log.Fatalf("Error in migration: %v", err)
 	}
 
-	// Inicializa os repositórios e os handlers
 	transactionRepo := repository.NewTransactionRepository(db)
 	transactionHandler := handlers.NewTransactionHandler(transactionRepo)
 
@@ -56,54 +53,58 @@ func main() {
 	investmentMovementRepo := repository.NewInvestmentMovementRepository(db)
 	investmentMovementHandler := handlers.NewInvestmentMovementHandler(investmentMovementRepo)
 
-	// Configura o router do Gin e o middleware de sessão
 	router := gin.Default()
 	store := cookie.NewStore([]byte("your_super_secret_key"))
 	router.Use(sessions.Sessions("finance_session", store))
 
 	api := router.Group("/api")
 	{
-		// Transactions
-		api.GET("/transactions", transactionHandler.GetTransactions)
-		api.POST("/transactions", transactionHandler.CreateTransaction)
-		api.PUT("/transactions/:id", transactionHandler.UpdateTransaction)
-		api.DELETE("/transactions/:id", transactionHandler.DeleteTransaction)
-
-		// Categories
-		api.GET("/categories", categoryHandler.GetCategories)
-		api.GET("/categories/:id", categoryHandler.GetCategory)
-		api.POST("/categories", categoryHandler.CreateCategory)
-		api.PUT("/categories/:id", categoryHandler.UpdateCategory)
-		api.DELETE("/categories/:id", categoryHandler.DeleteCategory)
-
-		// Users
-		api.GET("/users", userHandler.GetUsers)
-		api.GET("/users/:id", userHandler.GetUser)
-		api.POST("/users", userHandler.CreateUser)
-		api.PUT("/users/:id", userHandler.UpdateUser)
-		api.DELETE("/users/:id", userHandler.DeleteUser)
-
-		// Auth and session
 		api.POST("/login", userHandler.Login)
-		api.POST("/logout", userHandler.Logout)
-		api.GET("/session", userHandler.GetSessionUser)
 
-		// Investments
-		api.GET("/investments", investmentHandler.GetInvestments)
-		api.GET("/investments/:id", investmentHandler.GetInvestment)
-		api.POST("/investments", investmentHandler.CreateInvestment)
-		api.PUT("/investments/:id", investmentHandler.UpdateInvestment)
-		api.DELETE("/investments/:id", investmentHandler.DeleteInvestment)
+		protected := api.Group("/")
+		protected.Use(middleware.AuthRequired())
+		{
+			// Auth and session
+			protected.POST("/logout", userHandler.Logout)
+			protected.GET("/session", userHandler.GetSessionUser)
 
-		// Invesment movements
-		api.GET("/investment_movements", investmentMovementHandler.GetMovements)
-		api.GET("/investment_movements/:id", investmentMovementHandler.GetMovement)
-		api.POST("/investment_movements", investmentMovementHandler.CreateMovement)
-		api.PUT("/investment_movements/:id", investmentMovementHandler.UpdateMovement)
-		api.DELETE("/investment_movements/:id", investmentMovementHandler.DeleteMovement)
+			// Transactions
+			protected.GET("/transactions", transactionHandler.GetTransactions)
+			protected.POST("/transactions", transactionHandler.CreateTransaction)
+			protected.PUT("/transactions/:id", transactionHandler.UpdateTransaction)
+			protected.DELETE("/transactions/:id", transactionHandler.DeleteTransaction)
+
+			// Categories
+			protected.GET("/categories", categoryHandler.GetCategories)
+			protected.GET("/categories/:id", categoryHandler.GetCategory)
+			protected.POST("/categories", categoryHandler.CreateCategory)
+			protected.PUT("/categories/:id", categoryHandler.UpdateCategory)
+			protected.DELETE("/categories/:id", categoryHandler.DeleteCategory)
+
+			// Users
+			protected.GET("/users", userHandler.GetUsers)
+			protected.GET("/users/:id", userHandler.GetUser)
+			protected.POST("/users", userHandler.CreateUser)
+			protected.PUT("/users/:id", userHandler.UpdateUser)
+			protected.DELETE("/users/:id", userHandler.DeleteUser)
+
+			// Investments
+			protected.GET("/investments", investmentHandler.GetInvestments)
+			protected.GET("/investments/:id", investmentHandler.GetInvestment)
+			protected.POST("/investments", investmentHandler.CreateInvestment)
+			protected.PUT("/investments/:id", investmentHandler.UpdateInvestment)
+			protected.DELETE("/investments/:id", investmentHandler.DeleteInvestment)
+
+			// Investment Movements
+			protected.GET("/investment_movements", investmentMovementHandler.GetMovements)
+			protected.GET("/investment_movements/:id", investmentMovementHandler.GetMovement)
+			protected.POST("/investment_movements", investmentMovementHandler.CreateMovement)
+			protected.PUT("/investment_movements/:id", investmentMovementHandler.UpdateMovement)
+			protected.DELETE("/investment_movements/:id", investmentMovementHandler.DeleteMovement)
+		}
 	}
 
-	// Route to docs in swagger (under development)
+	// Route for Swagger documentation (if needed, uncomment later)
 	// router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	log.Println("Server running on 8080")
